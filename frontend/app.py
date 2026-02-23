@@ -360,6 +360,57 @@ elif menu == "🎬 YouTube":
     if not available_models:
         st.warning("⚠️ Belum ada model yang terlatih. Jalankan training terlebih dahulu.")
     else:
+        # Explanation section
+        with st.expander("ℹ️ **Perbedaan Live Chat vs Comments**", expanded=True):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("""
+                ### 🔴 **LIVE CHAT**
+                
+                **Apa itu:**
+                - Chat real-time saat video LIVE STREAMING
+                - Bisa juga diakses di REPLAY mode (YouTube menyimpan chat history)
+                - Kecepatan tinggi, urutan cronologis
+                
+                **Karakteristik:**
+                - Pesan lebih singkat (chat format)
+                - Sering emotional/spontan
+                - High volume buat video populer
+                - Format: Direct messages tanpa reply threads
+                
+                **Library:** `pytchat`
+                
+                **Kapan gunakan:**
+                ✅ Video live streaming
+                ✅ Video dengan banyak engagement
+                ✅ Ingin data real-time/spontan
+                """)
+            
+            with col2:
+                st.markdown("""
+                ### 💬 **REGULAR COMMENTS**
+                
+                **Apa itu:**
+                - Komentar standar YouTube (section komentar di bawah video)
+                - Bisa di-sort: Terbaru, Popular, Relevan
+                - Ditulis setelah pertonton selesai nonton (atau pause)
+                
+                **Karakteristik:**
+                - Pesan lebih panjang/terstruktur
+                - Lebih thoughtful/reviewed
+                - Includes replies & threads
+                - Volume lebih sedikit tapi lebih meaningful
+                
+                **Library:** `youtube-comment-downloader`
+                
+                **Kapan gunakan:**
+                ✅ Video recorded (tidak live)
+                ✅ Analisis mendalam/feedback
+                ✅ Video tanpa live chat feature
+                """)
+        
+        st.markdown("---")
         st.markdown("### 📤 Konfigurasi Scraping")
         
         col1, col2 = st.columns(2)
@@ -375,16 +426,18 @@ elif menu == "🎬 YouTube":
                 index=0,
             )
         
+        st.info("🤖 Mode scraping dikunci ke **AUTO**: sistem akan cek **live chat** dulu, lalu fallback ke **comments** jika live chat tidak tersedia.")
+
         col1, col2, col3 = st.columns(3)
         with col1:
-            scrape_mode = st.selectbox(
+            st.text_input(
                 "📌 Mode Scraping",
-                options=["auto", "live_chat", "comments"],
-                index=0,
+                value="AUTO (live chat → comments)",
+                disabled=True,
             )
         with col2:
             max_items = st.number_input(
-                "📊 Jumlah Data",
+                "📊 Jumlah Data per Source",
                 min_value=10,
                 max_value=500,
                 value=100,
@@ -403,7 +456,7 @@ elif menu == "🎬 YouTube":
                             f"{BACKEND_URL}/scrape",
                             json={
                                 "url": youtube_url,
-                                "mode": scrape_mode,
+                                "mode": "auto",
                                 "max_items": int(max_items),
                                 "predict": predict_after_scrape,
                                 "algorithm": scrape_model,
@@ -414,6 +467,10 @@ elif menu == "🎬 YouTube":
                         payload = response.json()
                         
                         st.success("✅ Scraping selesai!")
+                        
+                        # Source information
+                        source_info = payload.get('source', 'unknown')
+                        st.info(f"📌 **Sumber data:** {source_info}")
                         
                         # Summary statistics
                         st.markdown("### 📊 Statistik Hasil")
@@ -426,19 +483,19 @@ elif menu == "🎬 YouTube":
                         with col1:
                             st.metric("Total Komentar", total)
                         with col2:
-                            st.metric("🔴 Hate Speech", hate_count, f"{hate_count/total*100:.1f}%")
+                            st.metric("🔴 Hate Speech", hate_count, f"{hate_count/total*100:.1f}%" if total > 0 else "0%")
                         with col3:
-                            st.metric("🟢 Non-Hate", non_hate_count, f"{non_hate_count/total*100:.1f}%")
+                            st.metric("🟢 Non-Hate", non_hate_count, f"{non_hate_count/total*100:.1f}%" if total > 0 else "0%")
                         
                         # Pie chart
-                        st.markdown("---")
-                        fig, ax = plt.subplots(figsize=(6, 4))
-                        sizes = [hate_count, non_hate_count]
-                        labels = [f"Hate ({hate_count})", f"Non-Hate ({non_hate_count})"]
-                        colors = ["#ff6b6b", "#51cf66"]
-                        ax.pie(sizes, labels=labels, colors=colors, autopct="%1.1f%%", startangle=90)
-                        ax.set_title("Distribusi Klasifikasi", fontweight="bold", fontsize=12)
-                        st.pyplot(fig, use_container_width=True)
+                        #st.markdown("---")
+                        #fig, ax = plt.subplots(figsize=(3.6, 2.8))
+                        #sizes = [hate_count, non_hate_count]
+                        #labels = [f"Hate ({hate_count})", f"Non-Hate ({non_hate_count})"]
+                        #colors = ["#ff6b6b", "#51cf66"]
+                        #ax.pie(sizes, labels=labels, colors=colors, autopct="%1.1f%%", startangle=90)
+                        #ax.set_title("Distribusi Klasifikasi", fontweight="bold", fontsize=12)
+                        #st.pyplot(fig, use_container_width=False)
                         
                         # Results table
                         st.markdown("---")
@@ -462,7 +519,88 @@ elif menu == "🎬 YouTube":
                             st.info("ℹ️ Tidak ada komentar yang berhasil diambil dari URL ini.")
                         
                     except Exception as err:
-                        st.error(f"❌ Scraping gagal: {err}")
+                        error_msg = str(err)
+                        st.error(f"❌ Scraping gagal: {error_msg}")
+                        
+                        # Helpful suggestions based on error
+                        st.markdown("---")
+                        st.subheader("🔧 Troubleshooting")
+                        
+                        # Check for NaN error (pytchat library issue)
+                        if "NaN" in error_msg or "float" in error_msg or "pytchat" in error_msg.lower():
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.markdown("""
+                                **❌ Problem: Pytchat Library Error (NaN)**
+                                
+                                Ini adalah issue dengan pytchat library pada video tertentu. 
+                                Pytchat gagal parse data dari YouTube API.
+                                """)
+                            
+                            with col2:
+                                st.markdown("""
+                                **✅ Solusi:**
+                                
+                                1️⃣ **Biarkan AUTO bekerja:**
+                                   - Sistem akan fallback ke comments secara otomatis
+                                   - Tidak perlu ganti mode manual
+
+                                2️⃣ **Coba video lain:**
+                                   - Video live yang berbeda
+                                   - Kemungkinan issue khusus video ini
+                                """)
+                            
+                            st.info(
+                                "💡 **Rekomendasi:** Tetap gunakan mode **AUTO**. "
+                                "Jika live chat gagal, sistem otomatis mencoba comments."
+                            )
+                        
+                        elif "live" in error_msg.lower():
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.markdown("""
+                                **❌ Problem: Live Chat Gagal**
+                                
+                                Kemungkinan penyebab:
+                                1. Video belum live atau sudah selesai
+                                2. Live chat ditutup creator
+                                3. Video sudah >30 hari (chat history terhapus)
+                                4. Network/timeout issue
+                                5. Video tidak punya live chat
+                                """)
+                            
+                            with col2:
+                                st.markdown("""
+                                **✅ Solusi:**
+                                
+                                1️⃣ Jika video SEDANG live:
+                                   - Tunggu network stabil
+                                   - Coba lagi dalam beberapa detik
+                                   
+                                2️⃣ Jika video sudah selesai:
+                                   - Sistem AUTO akan fallback ke comments
+                                   - Cukup jalankan scrape lagi
+                                   
+                                3️⃣ Untuk video regular (bukan live):
+                                   - Sistem AUTO akan langsung ambil comments
+                                   - Live chat hanya ada di livestream
+                                """)
+                            
+                            st.info(
+                                "💡 **Tips:** Coba copy-paste URL video live streaming lain, "
+                                "lalu jalankan lagi dengan AUTO mode."
+                            )
+                        
+                        else:
+                            st.warning(
+                                "**💡 Tips Umum:**\n"
+                                "- Cek URL YouTube sudah benar\n"
+                                "- Jalankan ulang scraping (AUTO akan fallback otomatis)\n"
+                                "- Tunggu beberapa detik dan coba lagi\n"
+                                "- Jika video private/deleted, scraping tidak bisa dilakukan"
+                            )
 
 # ===== DOCUMENTATION PAGE =====
 elif menu == "📚 Dokumentasi":
@@ -788,6 +926,88 @@ elif menu == "📚 Dokumentasi":
     Decision: Gunakan model dengan F1 tertinggi (default di app)
     ```
     """)
+    
+    st.markdown("---")
+    
+    # YouTube Scraping Info
+    st.markdown("## 🎬 YouTube Data Collection Methods")
+    
+    with st.expander("📡 **Live Chat vs Regular Comments**", expanded=True):
+        st.markdown("""
+        ### 🔴 LIVE CHAT
+        
+        **Sumber Data:**
+        - Chat real-time saat video LIVE STREAMING
+        - Atau REPLAY mode (YouTube menyimpan chat history 30 hari)
+        
+        **Karakteristik Pesan:**
+        - Sangat singkat (chat/instant messaging format)
+        - Emotional & spontan (typed while watching)
+        - High volume untuk video populer
+        - Urutan: Chronological (newest di bawah)
+        - Tidak ada structured replies (flat structure)
+        
+        **Alasan Gunakan:**
+        ✅ Video live streaming (konten entertainment, gaming, podcast)
+        ✅ Ingin data REAL-TIME/spontan
+        ✅ Video dengan engagement tinggi
+        ✅ Analisis sentiment natural/unfiltered
+        
+        **Library:** `pytchat`
+        **Kecepatan:** Sedang (realtime fetch)
+        **Akurasi Metadata:** Baik (includes username, timestamp, emoji reactions)
+        
+        ### 💬 REGULAR COMMENTS
+        
+        **Sumber Data:**
+        - Komentar standar YouTube (section bawah video)
+        - Ditulis SETELAH atau SELAMA menonton (tidak live)
+        - Video recorded, shorts, atau live yang sudah selesai
+        
+        **Karakteristik Pesan:**
+        - Lebih panjang & terstruktur (ditulis dengan pertimbangan)
+        - Thoughtful/meaningful (bukan impulsive)
+        - Includes nested replies & comment threads
+        - Bisa di-sort: Recent, Top, Relevant
+        - Metadata lengkap (likes, replies count)
+        
+        **Alasan Gunakan:**
+        ✅ Video recorded (bukan live streaming)
+        ✅ Ingin feedback lebih MEANINGFUL/analyzed
+        ✅ Analisis mendalam sentiment & konteks
+        ✅ Video dengan comment volume sedang
+        
+        **Library:** `youtube-comment-downloader`
+        **Kecepatan:** Cepat (batch download)
+        **Akurasi Metadata:** Excellent (includes likes, reply structure)
+        
+        ### 🔄 KOMBINASI (BOTH MODE)
+        
+        **Kombinasi Live Chat + Regular Comments**
+        
+        **Keuntungan:**
+        - Data paling komprehensif
+        - Capture both spontan & thoughtful feedback
+        - Higher volume untuk analisis
+        - Better representation of audience perspective
+        
+        **Pertimbangan:**
+        - Waktu scraping lebih lama (both sequential)
+        - Bisa ada duplikasi jika user comment di kedua tempat
+        - Perlu 2x API calls
+        
+        ### ✅ Rekomendasi Penggunaan
+        
+        | Tipe Video | Mode | Alasan |
+        |-----------|------|--------|
+        | Live streaming (ongoing) | `live_chat` | Only live chat available |
+        | Live streaming (replay) | `live_chat` → `both` | Chat history + comments |
+        | Regular video (recorded) | `comments` | More structured feedback |
+        | News/Controversial | `both` | Capture spontan + analyzed |
+        | Entertainment (gaming) | `live_chat` → `both` | High engagement chat |
+        | Tutorial/Educational | `comments` | In-depth Q&A in comments |
+        
+        """)
     
     st.markdown("---")
     st.markdown("### 💡 Referensi")

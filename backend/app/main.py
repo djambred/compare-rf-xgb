@@ -131,7 +131,7 @@ def scrape(payload: ScrapeRequest) -> dict:
     try:
         source, comments = scrape_youtube(
             url=payload.url,
-            mode=payload.mode,
+            mode="auto",
             max_items=max(1, min(payload.max_items, 500)),
         )
 
