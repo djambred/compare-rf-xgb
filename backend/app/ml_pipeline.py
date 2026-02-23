@@ -23,6 +23,8 @@ VECTORIZER_PATH = MODEL_DIR / "tfidf_vectorizer.joblib"
 RF_MODEL_PATH = MODEL_DIR / "random_forest_model.joblib"
 XGB_MODEL_PATH = MODEL_DIR / "xgboost_model.joblib"
 
+FALLBACK_EXTENSION = ".h5"
+
 RANDOM_STATE = 42
 
 SLANG_MAP = {
@@ -312,6 +314,17 @@ def _persist_metrics(store: dict[str, Any]) -> None:
     METRICS_PATH.write_text(json.dumps(store, indent=2), encoding="utf-8")
 
 
+def _resolve_artifact_path(primary_path: Path) -> Path | None:
+    if primary_path.exists():
+        return primary_path
+
+    fallback_path = primary_path.with_suffix(FALLBACK_EXTENSION)
+    if fallback_path.exists():
+        return fallback_path
+
+    return None
+
+
 def train_single(model_name: str, tune: bool = False, fast: bool = False) -> dict[str, Any]:
     if model_name not in {"random_forest", "xgboost"}:
         raise ValueError("Model name must be random_forest or xgboost.")
@@ -383,25 +396,27 @@ def train_and_compare(tune: bool = False, fast: bool = False) -> dict[str, Any]:
 
 
 def load_best_model() -> TrainedArtifacts:
-    if not BEST_MODEL_PATH.exists():
+    model_path = _resolve_artifact_path(BEST_MODEL_PATH)
+    if model_path is None:
         raise FileNotFoundError("Best model not found. Train the model first.")
-    return joblib.load(BEST_MODEL_PATH)
+    return joblib.load(model_path)
 
 
 def load_model_by_name(model_name: str) -> TrainedArtifacts:
-    if not VECTORIZER_PATH.exists():
+    vectorizer_path = _resolve_artifact_path(VECTORIZER_PATH)
+    if vectorizer_path is None:
         raise FileNotFoundError("Vectorizer not found. Train the model first.")
 
-    vectorizer = joblib.load(VECTORIZER_PATH)
+    vectorizer = joblib.load(vectorizer_path)
 
     if model_name == "random_forest":
-        model_path = RF_MODEL_PATH
+        model_path = _resolve_artifact_path(RF_MODEL_PATH)
     elif model_name == "xgboost":
-        model_path = XGB_MODEL_PATH
+        model_path = _resolve_artifact_path(XGB_MODEL_PATH)
     else:
         raise ValueError("Model name must be random_forest or xgboost.")
 
-    if not model_path.exists():
+    if model_path is None:
         raise FileNotFoundError(f"Model {model_name} not found. Train the model first.")
 
     model = joblib.load(model_path)
@@ -440,13 +455,15 @@ def get_saved_metrics() -> dict[str, Any]:
 def get_available_models() -> list[str]:
     available: list[str] = []
 
-    if VECTORIZER_PATH.exists() and RF_MODEL_PATH.exists():
+    vectorizer_path = _resolve_artifact_path(VECTORIZER_PATH)
+
+    if vectorizer_path and _resolve_artifact_path(RF_MODEL_PATH):
         available.append("random_forest")
 
-    if VECTORIZER_PATH.exists() and XGB_MODEL_PATH.exists():
+    if vectorizer_path and _resolve_artifact_path(XGB_MODEL_PATH):
         available.append("xgboost")
 
-    if BEST_MODEL_PATH.exists():
+    if _resolve_artifact_path(BEST_MODEL_PATH):
         available.insert(0, "best")
 
     return available

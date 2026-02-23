@@ -9,6 +9,7 @@ services:
       - BACKEND_URL=http://localhost:8000
     volumes:
       - ./dataset:/app/dataset
+      - ./model:/app/model
 
   dataset_downloader:
     build: .

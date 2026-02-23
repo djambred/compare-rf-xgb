@@ -11,3 +11,6 @@ joblib==1.5.2
 huggingface_hub==0.34.4
 youtube-comment-downloader==0.1.76
 pytchat==0.5.5
+PySastrawi
+matplotlib==3.9.3
+seaborn==0.13.2

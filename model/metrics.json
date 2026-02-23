@@ -1,46 +1,46 @@
 {
-  "best_algorithm": "random_forest",
+  "best_algorithm": "xgboost",
   "dataset_size": 14306,
   "train_size": 11444,
   "validation_size": 2862,
   "metrics": {
     "random_forest": {
-      "precision": 0.8025,
-      "recall": 0.7959,
-      "f1_score": 0.7992,
-      "roc_auc": 0.9103,
+      "precision": 0.7602441150828247,
+      "recall": 0.7206611570247934,
+      "f1_score": 0.7399236317352567,
+      "roc_auc": 0.8728966141716527,
       "confusion_matrix": [
         [
-          1415,
-          237
+          1377,
+          275
         ],
         [
-          247,
-          963
+          338,
+          872
         ]
       ]
     },
     "xgboost": {
-      "precision": 0.8143,
-      "recall": 0.7612,
-      "f1_score": 0.7868,
-      "roc_auc": 0.899,
+      "precision": 0.8032638259292838,
+      "recall": 0.7322314049586777,
+      "f1_score": 0.7661046260268051,
+      "roc_auc": 0.8812616312808915,
       "confusion_matrix": [
         [
-          1442,
-          210
+          1435,
+          217
         ],
         [
-          289,
-          921
+          324,
+          886
         ]
       ]
     }
   },
   "artifacts": {
-    "vectorizer": "model/tfidf_vectorizer.h5",
-    "random_forest": "model/random_forest_model.h5",
-    "best_model": "model/best_model.h5",
-    "xgboost": "model/xgboost_model.h5"
+    "vectorizer": "model/tfidf_vectorizer.joblib",
+    "random_forest": "model/random_forest_model.joblib",
+    "best_model": "model/best_model.joblib",
+    "xgboost": "model/xgboost_model.joblib"
   }
 }

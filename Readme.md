@@ -163,6 +163,8 @@ docker compose --profile init run --rm dataset_downloader
 docker compose up app
 ```
 
+Folder `model/` akan di-mount ke container, jadi model yang sudah ada bisa langsung dipakai untuk prediksi tanpa training ulang.
+
 ### 4) Training & evaluasi model (RF vs XGBoost)
 - Buka Streamlit di `http://localhost:8501`
 - Klik **Train Random Forest** untuk melatih RF
