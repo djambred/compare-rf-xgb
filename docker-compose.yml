@@ -3,8 +3,8 @@ services:
     build: .
     container_name: mch-skr-app
     ports:
-      - "8000:8000"
-      - "8501:8501"
+      - "8080:8000"
+      - "8081:8501"
     environment:
       - BACKEND_URL=http://localhost:8000
     volumes:
